@@ -1,0 +1,12 @@
+# Arduino build files
+build/
+*.hex
+*.elf
+*.bin
+*.eep
+*.map
+
+# OS or IDE metadata
+.vscode/
+*.swp
+Thumbs.db
