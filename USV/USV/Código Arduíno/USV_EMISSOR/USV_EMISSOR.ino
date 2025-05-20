@@ -1,188 +1,157 @@
-// Inclusão de bibliotecas
-#include <SPI.h>       // para lidar com a interface de comunicação com o modem
-#include <nRF24L01.h>  // para lidar com o driver específico do modem
-#include <RF24.h>      // biblioteca que facilita o controlo do rádio modem
+//Adding Libraries
 
-// Rádio
-RF24 radio(9, 10);                // Criação da instância 'radio'  ( CE , CSN )   CE -> D9 | CSN -> D10
-const byte Address[6] = "00001";  // Endereço para o qual os dados serão transmitidos
+#include <SPI.h>       // to handle the communication interface with the modem
+#include <nRF24L01.h>  // to handle this particular modem driver
+#include <RF24.h>      // the library which helps us to control the radio modem
+
+RF24 radio(9, 10);                // Creating instance 'radio'  ( CE , CSN )   CE -> D9 | CSN -> D10
+const byte Address[6] = "00001";  // Address to which data to be transmitted
+
+const int potPinA = A1;
+const int potPinB = A0;
+int potValueY = 0;
+int potValueX = 0;
+
+const int switchPin = 3;
+const int ledPinA = 5;
+const int ledPinB = 6;
+int switchState = 0;
+
+int vel_MC;
+int vel_Turn;
+
 char msg, buffer[5];
-int NBytes, dados;
-
-// Entradas e Saídas
-const int potPinA = A1, potPinB = A0;  // Entradas dos potenciómetros
-const int switchPin = 3;               // Botão ON/OFF do comando
-const int ledPinA = 5, ledPinB = 6;    // Entradas ou Saídas? para os LED's
-
-// Variáveis e objetos
-int potValueY = 0, potValuex = 0, switchState = 0;
-int vel_MC, vel_Turn, vel_C;
+int NBytes;
+int dados;
 
 
-void setup() 
-{
-  Serial.begin(19200);
+void setup() {
 
-  // Inicialização do Switch (ON/OFF)
   pinMode(switchPin, INPUT_PULLUP);
-
-  //Inicialização dos LED's
   pinMode(ledPinA, OUTPUT);
   pinMode(ledPinB, OUTPUT);
-
-  // Indicar que está ligado através dos LED's
   digitalWrite(ledPinA, LOW);
   digitalWrite(ledPinB, HIGH);
 
   pinMode(potPinA, INPUT);
   pinMode(potPinB, INPUT);
-
-  // Inicialização do rádio
-  radio.begin();                   // Ativa o modem
-  radio.openWritingPipe(Address);  // Define o endereço do transmissor para onde os dados serão enviados
-  radio.setPALevel(RF24_PA_MIN);   // Define o nível de potência (mínimo)
-  radio.stopListening();           // Coloca o modem em modo de transmissão
+  Serial.begin(19200);
+  radio.begin();                   // Activate the modem
+  radio.openWritingPipe(Address);  // Sets the address of transmitter to which program will send the data
+  radio.setPALevel(RF24_PA_MIN);   //???
+  radio.stopListening();           // Setting modem in transmission mode
 }
 
-void loop() 
-{
+void loop() {
 
-  switchState = digitalRead(switchPin);  // Lê o estado do botão ON/OFF
+  switchState = digitalRead(switchPin);
 
-  if (switchState == LOW)  // Neste caso está LIGADO (ON)
-  {
-    // Acende os LED's
+  if (switchState == LOW) {
     digitalWrite(ledPinA, HIGH);
     digitalWrite(ledPinB, LOW);
-
-    // Envia os dados
-    dados = 30100;
-    radio.write(&dados, sizeof(dados));  // Envia dados via NRF24L01
-
-    // Verificação
     Serial.println("LOW");
+    dados = 30100;
+    radio.write(&dados, sizeof(dados));  // Sending data over NRF 24L01
     Serial.print("Transmitted msg : ");
     Serial.println(dados);
 
-  } 
-  else  //Neste caso está OFF
-  {
+  } else {
 
-    // Colocar os LED's OFF
     digitalWrite(ledPinA, LOW);
     digitalWrite(ledPinB, HIGH);
-
-    // Envia os dados
-    dados = 40200;
-    radio.write(&dados, sizeof(dados));  // Envia dados via NRF24L01
-
-    // Verificação de quê?
     Serial.println("HIGH");
+    dados = 30200;
+    radio.write(&dados, sizeof(dados));  // Sending data over NRF 24L01
     Serial.print("Transmitted msg : ");
     Serial.println(dados);
   }
 
-  if (switchState == LOW) 
-  {
+  if (switchState == LOW) {
+    potValueY = analogRead(potPinA);
+    if ((potValueY > 515) && (potValueY < 525)) {
 
-    // Leitura do joystick
-    potValueY = analogRead(potPinY);
-    potValueX = analogRead(potPinX);
-
-    // Corrigir zona morta
-    if (potValueY > 510 && potValueY < 515)
       potValueY = 512;
+    }
 
-    if (potValueX > 510 && potValueX < 515)
+    potValueX = analogRead(potPinB);
+    //serial.print("potValueX")
+
+    if ((potValueX > 512) && (potValueX < 520)) {
+      
       potValueX = 512;
+    }
 
-    // Mapeamento
-    vel_MC = map(potValueY, 0, 1023, 1800, 1200);   // Frente/trás
-    vel_Turn = map(potValueY, 0, 1023, 200, -200);  // Curva baseada no mesmo eixo Y
-    vel_C = map(potValueX, 0, 1023, 1800, 1200);    // Movimento lateral motor C
+    vel_MC = map(potValueY, 0, 1023, 1800, 1200);
+    vel_Turn = map(potValueX, 0, 1023, 200, -200);
 
-    // Verificação
+  
+
     Serial.print("vel_MC: ");
     Serial.println(vel_MC);
+
     Serial.print("vel_Turn: ");
     Serial.println(vel_Turn);
-    Serial.print("vel_C: ");
-    Serial.println(vel_C);
+
     Serial.print("potValueY = ");
     Serial.println(potValueY);
+
     Serial.print("potValueX = ");
     Serial.println(potValueX);
 
-    // Motor A = velocidade + curva
     dados = 10000 + vel_MC + vel_Turn;
-    radio.write(&dados, sizeof(dados)); // Envia dados via NRF24L01
 
-    // Verificação
+    radio.write(&dados, sizeof(dados));  // Sending data over NRF 24L01
     Serial.print("Transmitted msg : ");
     Serial.println(dados);
+
     Serial.print("msg_A (valor): ");
     Serial.println(dados - 10000);
     Serial.println("----------------------");
 
-    // Motor B = velocidade - curva
     dados = 20000 + vel_MC - vel_Turn;
-    radio.write(&dados, sizeof(dados)); // Envia dados via NRF24L01
 
-    // Verificação
+    radio.write(&dados, sizeof(dados));  // Sending data over NRF 24L01
     Serial.print("Transmitted msg : ");
     Serial.println(dados);
+
     Serial.print("msg_B (valor): ");
     Serial.println(dados - 20000);
     Serial.println("----------------------");
 
-    // Motor C = movimento lateral
-    dados = 30000 + vel_C;
-    radio.write(&dados, sizeof(dados)); // Envia dados via NRF24L01
+    if (Serial.available()) {
 
-    // Verificação
-    Serial.print("Transmitted msg : ");
-    Serial.println(dados);
-    Serial.print("Motor C: ");
-    Serial.println(vel_C);
-    Serial.println("----------------------");
-  }
+      msg = Serial.read();
 
-  // Fazer Manualmente o controlo dos motores
-  if (Serial.available()) 
-  {
+      if (msg == 'A') {
 
-    msg = Serial.read();
+        NBytes = Serial.readBytesUntil('\r\n', buffer, 5);
 
-    if (msg == 'A') 
-    {
+        dados = 10000 + atoi(buffer);
 
-      NBytes = Serial.readBytesUntil('\r\n', buffer, 5);
+        radio.write(&dados, sizeof(dados));  // Sending data over NRF 24L01
+        Serial.print("Transmitted msg : ");
+        Serial.println(dados);
 
-      dados = 10000 + atoi(buffer);
+        Serial.print("msg_A (valor1): ");
+        Serial.println(dados - 10000);
+        Serial.println("----------------------");
+      }
 
-      radio.write(&dados, sizeof(dados));  // Sending data over NRF 24L01
-      Serial.print("Transmitted msg : ");
-      Serial.println(dados);
-      Serial.print("msg_A (valor1): ");
-      Serial.println(dados - 10000);
-      Serial.println("----------------------");
+      if (msg == 'B') {
+
+        NBytes = Serial.readBytesUntil('\r\n', buffer, 5);
+
+        dados = 20000 + atoi(buffer);
+
+        radio.write(&dados, sizeof(dados));  // Sending data over NRF 24L01
+        Serial.print("Transmitted msg : ");
+        Serial.println(dados);
+
+        Serial.print("msg_B (valor2): ");
+        Serial.println(dados - 20000);
+        Serial.println("----------------------");
+      }
     }
-
-    if (msg == 'B') 
-    {
-
-      NBytes = Serial.readBytesUntil('\r\n', buffer, 5);
-      dados = 20000 + atoi(buffer);
-
-      radio.write(&dados, sizeof(dados));  // Sending data over NRF 24L01
-      Serial.print("Transmitted msg : ");
-      Serial.println(dados);
-      Serial.print("msg_B (valor2): ");
-      Serial.println(dados - 20000);
-      Serial.println("----------------------");
-    }
-
-    // Fazer um delay
     delay(450);
   }
 }
