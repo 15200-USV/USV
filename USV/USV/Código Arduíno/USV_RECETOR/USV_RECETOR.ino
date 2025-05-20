@@ -1,109 +1,93 @@
-//// Adicionar Bibliotecas
-#include <SPI.h>      // para gerir a interface de comunicação com o modem
-#include <nRF24L01.h> // para controlar este driver de modem específico
-#include <RF24.h>     // biblioteca que nos ajuda a controlar o modem de rádio
+//// Adding Libraries
+#include <SPI.h>      /* to handle the communication interface with the modem*/
+#include <nRF24L01.h> /* to handle this particular modem driver*/
+#include <RF24.h>     /* the library which helps us to control the radio modem*/
+
 #include <Servo.h>
+Servo motorA;
 
-// Objetos e Variáveis
-Servo motorA, motorB, motorC;
-int pwmPinA = 7, pwmPinB = 6, pwmPinC = 5; // Definir o valor para pwmPinC quando souberes a porta
-int pwmVal = 1500;                         // Valor neutro do servo
-const int ledPinA = 47, ledPinB = 46;      // LEDs para mostrar se está em modo automático ou não
+int pwmPinA = 7;
+int pwmVal = 1500;
 
-// Rádio
-RF24 radio(9, 10);                         // Criar instância 'radio' ( CE , CSN )   CE -> D9 | CSN -> D10
-const byte Address[6] = "00001";           // Endereço do qual os dados serão recebidos
-int dados;                                 // Variável que vai receber os dados transmitidos
-int valor = 0;                             // Variável que recebe o número para executar as ações
+Servo motorB;
 
-void setup() 
-{
+int pwmPinB = 6;
+
+RF24 radio(9, 10);               /* Creating instance 'radio'  ( CE , CSN )   CE -> D9 | CSN -> D10 */
+const byte Address[6] = "00001"; /* Address from which data to be received */
+
+int dados;
+
+const int ledPinA = 47;
+const int ledPinB = 46;
+
+int valor = 0;
+
+void setup() {
+
   Serial.begin(9600);
 
-  radio.begin();                           // Inicializar o rádio
-  radio.openReadingPipe(1, Address);       // Configurar o canal de receção
-  radio.setPALevel(RF24_PA_MIN);           // Definir a potência da transmissão
-  radio.startListening();                  // Colocar o rádio em modo de escuta
+  radio.begin();                      // Activate the modem
+  radio.openReadingPipe(1, Address);  // Sets the address of receiver from which program will receive the data
+  radio.setPALevel(RF24_PA_MIN);      //???
+  radio.startListening();             //Setting modem in Receiver mode
 
-  // Inicializar os LEDs
   pinMode(ledPinA, OUTPUT);
   pinMode(ledPinB, OUTPUT);
 
-  // Inicializar o motor A
-  motorA.attach(pwmPinA);
+  motorA.attach(pwmPinA);  // attaches the servo on pin 3 to the servo object
   motorA.writeMicroseconds(pwmVal);
 
-  // Inicializar o motor B
   motorB.attach(pwmPinB);
   motorB.writeMicroseconds(pwmVal);
-
-  // Inicializar o motor C
-  motorC.attach(pwmPinC);
-  motorC.writeMicroseconds(pwmVal);
 }
 
-void loop() 
-{
-  if (radio.available()) 
-  {
+void loop() {
+
+  if (radio.available()) {
 
     radio.read(&dados, sizeof(dados));
 
-    Serial.print("Mensagem recebida: "); 
+    //motor = char(dados[0]);
+    //SPEED = int8_t(dados[1]);
+
+    Serial.print("Received msg: ");
     Serial.println(dados);
 
-    switch (dados / 10000) 
-    {
-      case 1:  // Caso seja o motor A (definir a posição)
-        
-        valor = dados % 10000;  // O resto da divisão inteira dá o valor a extrair (ou "valor = dados - 10000")
-        motorA.writeMicroseconds(valor);  // Enviar a velocidade para o motor
+    switch (dados / 10000) {  //dados é uma variável inteira ---então--> dados/1000 dará 1, 2, 3, etc.
+      case 1:
+        valor = dados % 10000;  // resto da divisão inteira dá o valor a extrair (ou "valor=dados-1000")
 
-        // Verificação do valor recebido
+        motorA.writeMicroseconds(valor);
+
         Serial.print("msg_A (valor1): ");
         Serial.println(valor);
         Serial.println("------------------");
         break;
+      case 2:
+        valor = dados % 20000;  // resto da divisão inteira dá o valor a extrair (ou "valor=dados-2000")
 
-      case 2:  // Caso seja o motor B (definir a posição)
-        
-        valor = dados % 20000;  // O resto da divisão inteira dá o valor a extrair (ou "valor = dados - 20000")
-        motorB.writeMicroseconds(valor);  // Enviar a velocidade para o motor
+        motorB.writeMicroseconds(valor);
 
-        // Verificação do valor recebido
         Serial.print("msg_B (valor2): ");
         Serial.println(valor);
         Serial.println("------------------");
         break;
+      case 3:
+        valor = dados % 30000;
+        if (valor == 100){
 
-      case 3:  // Caso seja o motor C (definir a posição)
-        
-        valor = dados % 30000;  // O resto da divisão inteira dá o valor a extrair (ou "valor = dados - 30000")
-        motorC.writeMicroseconds(valor);  // Enviar a velocidade para o motor
+          digitalWrite(ledPinA, HIGH);
+          digitalWrite(ledPinB, LOW);
 
-        // Verificação do valor recebido
-        Serial.print("msg_C (valor3): ");
-        Serial.println(valor);
-        Serial.println("------------------");
-        break;
+        } else {
 
-      case 4:  // Mostrar se está em modo controlo (ON) ou não (OFF)
-        
-        valor = dados % 40000;
-        if (valor == 100) 
-        {
-          digitalWrite(ledPinA, HIGH);  // Acende o LED A
-          digitalWrite(ledPinB, LOW);   // Apaga o LED B
-        } 
-        else 
-        {
-          digitalWrite(ledPinA, LOW);   // Apaga o LED A
-          digitalWrite(ledPinB, HIGH);  // Acende o LED B
+          digitalWrite(ledPinA, LOW);
+          digitalWrite(ledPinB, HIGH);
         }
-        break;
         
       default:
-        // Nenhuma ação definida
+        // statements
         break;
     }
   }
