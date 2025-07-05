@@ -1,6 +1,6 @@
 # USV - https://github.com/15200-USV/USV.git
 Repositório de projeto USV - Rumo à Noruega
-Claro! Aqui tens um **guia passo a passo simples** para qualquer colega que **ainda não tem GitHub** ou **não tem o repositório no computador**, para poder começar a colaborar no projeto convosco usando Git e GitHub.
+**Guia passo a passo simples** para qualquer colega que **ainda não tem GitHub** ou **não tem o repositório no computador**, para poder começar a colaborar no projeto convosco usando Git e GitHub.
 
 ---
 
